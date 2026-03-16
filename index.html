@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ARTENO — Digital Assistant</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; color: #1a1a1a; height: 100vh; overflow: hidden; }
+
+  .app { display: flex; height: 100vh; }
+
+  /* SIDEBAR */
+  .sidebar { width: 220px; min-width: 220px; background: #fff; border-right: 1px solid #e8e8e6; display: flex; flex-direction: column; }
+  .logo { padding: 1.25rem; border-bottom: 1px solid #e8e8e6; }
+  .logo-title { font-size: 15px; font-weight: 600; letter-spacing: 0.12em; color: #1a1a1a; }
+  .logo-sub { font-size: 11px; color: #999; margin-top: 3px; }
+  .nav { padding: .75rem 0; flex: 1; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 1.25rem; font-size: 13px; color: #666; cursor: pointer; transition: all 0.15s; }
+  .nav-item:hover { background: #f5f5f3; color: #1a1a1a; }
+  .nav-item.active { background: #f5f5f3; color: #1a1a1a; font-weight: 500; }
+  .nav-icon { font-size: 14px; width: 16px; text-align: center; }
+  .badge { margin-left: auto; font-size: 10px; font-weight: 600; background: #e8f0fe; color: #1a56db; padding: 2px 6px; border-radius: 8px; }
+
+  /* MAIN */
+  .main { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
+  .topbar { background: #fff; border-bottom: 1px solid #e8e8e6; padding: .75rem 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+  .topbar-title { font-size: 14px; font-weight: 500; color: #1a1a1a; }
+  .topbar-actions { display: flex; gap: 8px; }
+  .btn { font-size: 12px; padding: 6px 12px; border: 1px solid #ddd; border-radius: 8px; background: transparent; color: #1a1a1a; cursor: pointer; font-family: inherit; transition: all .15s; }
+  .btn:hover { background: #f5f5f3; }
+  .btn-primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+  .btn-primary:hover { background: #333; }
+  .content { flex: 1; overflow-y: auto; padding: 1.5rem; }
+  .sec { display: none; } .sec.active { display: block; }
+
+  /* CHAT */
+  .cwrap { display: flex; flex-direction: column; height: calc(100vh - 120px); }
+  .msgs { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding-bottom: 1rem; }
+  .msg { display: flex; gap: 10px; align-items: flex-start; }
+  .msg.u { flex-direction: row-reverse; }
+  .av { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; flex-shrink: 0; }
+  .av.ai { background: #e8f0fe; color: #1a56db; }
+  .av.u { background: #f0f0ee; color: #666; }
+  .bub { max-width: 80%; font-size: 13px; line-height: 1.6; padding: 10px 14px; border-radius: 12px; background: #f5f5f3; color: #1a1a1a; border: 1px solid #e8e8e6; }
+  .msg.u .bub { background: #fff; }
+  .bub.ld { color: #999; font-style: italic; }
+  .irow { display: flex; gap: 8px; align-items: flex-end; background: #fff; border: 1px solid #ddd; border-radius: 12px; padding: 10px 12px; }
+  .ci { flex: 1; border: none; background: transparent; font-size: 13px; font-family: inherit; color: #1a1a1a; resize: none; outline: none; max-height: 120px; line-height: 1.5; }
+  .sb { width: 30px; height: 30px; border-radius: 50%; background: #1a1a1a; color: #fff; border: none; cursor: pointer; font-size: 14px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity .15s; }
+  .sb:hover { opacity: 0.8; }
+
+  /* OFFICES */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  .sc { background: #f5f5f3; border-radius: 8px; padding: .85rem; }
+  .sv { font-size: 22px; font-weight: 600; color: #1a1a1a; }
+  .sl { font-size: 11px; color: #999; margin-top: 2px; }
+  .sbar { width: 100%; font-size: 13px; font-family: inherit; padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd; background: #fff; color: #1a1a1a; outline: none; margin-bottom: .75rem; }
+  .fpills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: .85rem; }
+  .fp { font-size: 11px; padding: 4px 12px; border-radius: 10px; cursor: pointer; border: 1px solid #e8e8e6; background: transparent; color: #666; font-family: inherit; transition: all .15s; }
+  .fp.on, .fp:hover { background: #f5f5f3; color: #1a1a1a; font-weight: 500; border-color: #ccc; }
+  .ogrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 10px; }
+  .ocard { background: #fff; border: 1px solid #e8e8e6; border-radius: 12px; padding: .9rem; cursor: pointer; transition: border-color .15s; }
+  .ocard:hover { border-color: #bbb; }
+  .otop { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+  .oname { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+  .osub { font-size: 11px; color: #999; margin-top: 1px; }
+  .sp { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
+  .s-contacted { background: #e6f4ea; color: #1e7e34; }
+  .s-send_sample { background: #e3f3fd; color: #0d6b9e; }
+  .s-appointment { background: #fff8e1; color: #f57f17; }
+  .s-not_interested { background: #fce8e6; color: #c5221f; }
+  .s-to_contact { background: #f5f5f3; color: #666; }
+  .onotes { font-size: 11px; color: #666; margin-top: 6px; border-top: 1px solid #f0f0ee; padding-top: 6px; line-height: 1.5; }
+  .ometa { font-size: 10px; color: #aaa; margin-top: 3px; }
+  .oacts { display: flex; gap: 5px; margin-top: 8px; }
+
+  /* MODAL */
+  .mover { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.3); z-index: 200; align-items: center; justify-content: center; }
+  .mover.open { display: flex; }
+  .modal { background: #fff; border: 1px solid #ddd; border-radius: 14px; padding: 1.5rem; width: 420px; max-width: 92vw; max-height: 85vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,.15); }
+  .mt { font-size: 15px; font-weight: 600; margin-bottom: .9rem; color: #1a1a1a; }
+  .fl { margin-bottom: 10px; }
+  .fl label { font-size: 11px; color: #666; display: block; margin-bottom: 3px; }
+  .fl input, .fl select, .fl textarea { width: 100%; font-size: 13px; font-family: inherit; padding: 7px 10px; border-radius: 8px; border: 1px solid #ddd; background: #f9f9f8; color: #1a1a1a; outline: none; transition: border-color .15s; }
+  .fl input:focus, .fl select:focus, .fl textarea:focus { border-color: #999; background: #fff; }
+  .fl textarea { resize: vertical; min-height: 70px; }
+  .macts { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1rem; }
+
+  /* CALENDAR */
+  .capts { display: flex; flex-direction: column; gap: 8px; }
+  .capt { background: #fff; border: 1px solid #e8e8e6; border-radius: 12px; padding: .9rem; }
+  .capt-top { display: flex; justify-content: space-between; align-items: flex-start; }
+  .capt-title { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+  .capt-date { font-size: 11px; font-weight: 600; background: #fff8e1; color: #f57f17; padding: 2px 8px; border-radius: 8px; }
+  .capt-meta { font-size: 11px; color: #999; margin-top: 4px; }
+
+  /* BRIEFING */
+  .bcard { background: #fff; border: 1px solid #e8e8e6; border-radius: 12px; padding: .9rem; margin-bottom: 8px; }
+  .bcard-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .bcard-name { font-size: 13px; font-weight: 500; color: #1a1a1a; }
+  .bcard-notes { font-size: 12px; color: #666; line-height: 1.6; }
+
+  .empty { text-align: center; padding: 3rem 1rem; color: #bbb; font-size: 13px; }
+
+  /* CALENDAR STATUS */
+  #cal-status { font-size: 12px; min-height: 18px; margin-top: 8px; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="sidebar">
+    <div class="logo">
+      <div class="logo-title">ARTENO</div>
+      <div class="logo-sub">Digital Assistant</div>
+    </div>
+    <nav class="nav">
+      <div class="nav-item active" onclick="showSec('chat',this)"><span class="nav-icon">✦</span>AI Βοηθός</div>
+      <div class="nav-item" onclick="showSec('offices',this)"><span class="nav-icon">◎</span>Γραφεία<span class="badge" id="cnt">0</span></div>
+      <div class="nav-item" onclick="showSec('calendar',this)"><span class="nav-icon">◈</span>Ραντεβού</div>
+      <div class="nav-item" onclick="showSec('briefing',this)"><span class="nav-icon">◆</span>Briefing</div>
+    </nav>
+  </div>
+
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="sectl">AI Βοηθός</div>
+      <div class="topbar-actions" id="tbacts">
+        <button class="btn" onclick="clearChat()">Νέα συνομιλία</button>
+      </div>
+    </div>
+    <div class="content">
+
+      <!-- CHAT -->
+      <div class="sec active" id="sec-chat">
+        <div class="cwrap">
+          <div class="msgs" id="msgs">
+            <div class="msg"><div class="av ai">A</div>
+              <div class="bub">Γεια! Είμαι ο ψηφιακός βοηθός της ARTENO.<br><br>
+                Μπορώ να σε βοηθήσω να:<br>
+                • Βρεις αρχιτεκτονικά γραφεία και στοιχεία επικοινωνίας<br>
+                • Καταγράψεις τι έγινε με κάθε γραφείο<br>
+                • Κλείσεις ραντεβού στο Google Calendar<br>
+                • Φτιάξεις briefing πριν από κάθε συνάντηση<br><br>
+                Τι κάνουμε σήμερα;
+              </div>
+            </div>
+          </div>
+          <div style="padding-top:8px">
+            <div class="irow">
+              <textarea class="ci" id="ci" rows="1"
+                placeholder="π.χ. 'βρες αρχιτεκτονικά γραφεία στο Κολωνάκι' ή 'κλείσε ραντεβού με lab athens Τρίτη 18/3 11:00'"
+                onkeydown="hkey(event)" oninput="ar(this)"></textarea>
+              <button class="sb" onclick="send()">→</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- OFFICES -->
+      <div class="sec" id="sec-offices">
+        <div class="stats" id="stats"></div>
+        <input class="sbar" id="osearch" placeholder="Αναζήτηση γραφείου, email, σημειώσεις..." oninput="renderOffices(this.value,curF)">
+        <div class="fpills" id="fpills"></div>
+        <div class="ogrid" id="ogrid"></div>
+      </div>
+
+      <!-- CALENDAR -->
+      <div class="sec" id="sec-calendar">
+        <div style="margin-bottom:1rem">
+          <button class="btn btn-primary" onclick="openCalMod()">+ Νέο Ραντεβού στο Google Calendar</button>
+        </div>
+        <div class="capts" id="callist"></div>
+      </div>
+
+      <!-- BRIEFING -->
+      <div class="sec" id="sec-briefing">
+        <input class="sbar" id="bsearch" placeholder="Αναζήτηση γραφείου για briefing..." oninput="renderBriefing(this.value)">
+        <div id="blist"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Office Edit Modal -->
+<div class="mover" id="omod">
+  <div class="modal">
+    <div class="mt">Επεξεργασία Γραφείου</div>
+    <div class="fl"><label>Όνομα</label><input id="em-name"></div>
+    <div class="fl"><label>Email</label><input id="em-email"></div>
+    <div class="fl"><label>Τηλέφωνο</label><input id="em-phone"></div>
+    <div class="fl"><label>Διεύθυνση</label><input id="em-addr"></div>
+    <div class="fl"><label>Κατάσταση</label>
+      <select id="em-status">
+        <option value="to_contact">Για επανεπικοινωνία</option>
+        <option value="contacted">Επικοινωνήσαμε</option>
+        <option value="send_sample">Να σταλεί δείγμα</option>
+        <option value="appointment">Ραντεβού κλεισμένο</option>
+        <option value="not_interested">Δεν ενδιαφέρεται</option>
+      </select>
+    </div>
+    <div class="fl"><label>Σημειώσεις / Ιστορικό</label><textarea id="em-notes" rows="4"></textarea></div>
+    <div class="macts">
+      <button class="btn" onclick="closeMod('omod')">Ακύρωση</button>
+      <button class="btn btn-primary" onclick="saveEdit()">Αποθήκευση</button>
+    </div>
+  </div>
+</div>
+
+<!-- Calendar Modal -->
+<div class="mover" id="calmod">
+  <div class="modal">
+    <div class="mt">Καταχώρηση Ραντεβού — Google Calendar</div>
+    <div class="fl"><label>Τίτλος *</label><input id="cal-title" placeholder="π.χ. Ραντεβού aspect architects"></div>
+    <div class="fl"><label>Ημερομηνία</label><input id="cal-date" type="date"></div>
+    <div class="fl"><label>Ώρα έναρξης</label><input id="cal-time" type="time" value="10:00"></div>
+    <div class="fl"><label>Διάρκεια (λεπτά)</label><input id="cal-dur" type="number" value="60" min="15" step="15"></div>
+    <div class="fl"><label>Τοποθεσία</label><input id="cal-loc" placeholder="π.χ. Μεταξά 22 Γλυφάδα"></div>
+    <div class="fl"><label>Σημειώσεις</label><textarea id="cal-notes" rows="3" placeholder="Briefing, τι να πω, τι να φέρω..."></textarea></div>
+    <div id="cal-status"></div>
+    <div class="macts">
+      <button class="btn" onclick="closeMod('calmod')">Ακύρωση</button>
+      <button class="btn btn-primary" id="cal-save-btn" onclick="saveToCalendar()">Αποθήκευση στο Calendar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── DATA ──────────────────────────────────────────────
+let offices = [];
+let appointments = [];
+let chatHist = [];
+let editId = null;
+let curF = 'all';
+
+const SL = {
+  contacted: 'Επικοινωνήσαμε',
+  send_sample: 'Να σταλεί δείγμα',
+  appointment: 'Ραντεβού κλεισμένο',
+  not_interested: 'Δεν ενδιαφέρεται',
+  to_contact: 'Για επανεπικοινωνία',
+  other: 'Άλλο'
+};
+
+const FILTERS = [
+  {k:'all',l:'Όλα'},
+  {k:'appointment',l:'Ραντεβού'},
+  {k:'send_sample',l:'Δείγμα'},
+  {k:'contacted',l:'Επικοινωνήσαμε'},
+  {k:'not_interested',l:'Δεν ενδιαφέρεται'},
+  {k:'to_contact',l:'Επανεπικοινωνία'}
+];
+
+// Load from localStorage
+try {
+  const s = localStorage.getItem('arteno_agent');
+  if (s) { const d = JSON.parse(s); offices = d.offices || []; appointments = d.appointments || []; }
+} catch(e) {}
+
+function save() {
+  try { localStorage.setItem('arteno_agent', JSON.stringify({offices, appointments})); } catch(e) {}
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+function showSec(name, el) {
+  document.querySelectorAll('.sec').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('sec-' + name).classList.add('active');
+  el.classList.add('active');
+  const T = {chat:'AI Βοηθός', offices:`Γραφεία (${offices.length})`, calendar:'Google Calendar', briefing:'Briefing Ραντεβού'};
+  document.getElementById('sectl').textContent = T[name] || name;
+  const acts = document.getElementById('tbacts');
+  if (name === 'chat') acts.innerHTML = `<button class="btn" onclick="clearChat()">Νέα συνομιλία</button>`;
+  else if (name === 'offices') acts.innerHTML = `<button class="btn btn-primary" onclick="openOfficeMod()">+ Προσθήκη</button>`;
+  else if (name === 'calendar') acts.innerHTML = `<button class="btn btn-primary" onclick="openCalMod()">+ Ραντεβού</button>`;
+  else acts.innerHTML = '';
+  if (name === 'offices') { renderStats(); renderFilters(); renderOffices('', curF); }
+  if (name === 'calendar') renderCal();
+  if (name === 'briefing') renderBriefing('');
+}
+
+// ── OFFICES ───────────────────────────────────────────
+function renderStats() {
+  const c = {total:offices.length, appointment:0, send_sample:0, contacted:0, not_interested:0};
+  offices.forEach(o => { if (c[o.status] !== undefined) c[o.status]++; });
+  document.getElementById('stats').innerHTML = `
+    <div class="sc"><div class="sv">${c.total}</div><div class="sl">Σύνολο</div></div>
+    <div class="sc"><div class="sv">${c.appointment}</div><div class="sl">Ραντεβού</div></div>
+    <div class="sc"><div class="sv">${c.contacted}</div><div class="sl">Επαφή</div></div>
+    <div class="sc"><div class="sv">${c.not_interested}</div><div class="sl">Αδιάφοροι</div></div>`;
+  document.getElementById('cnt').textContent = offices.length;
+}
+
+function renderFilters() {
+  document.getElementById('fpills').innerHTML = FILTERS.map(f =>
+    `<button class="fp${curF===f.k?' on':''}" onclick="setF('${f.k}')">${f.l}</button>`).join('');
+}
+
+function setF(k) { curF = k; renderFilters(); renderOffices(document.getElementById('osearch').value, k); }
+
+function renderOffices(q='', filter='all') {
+  let list = offices.filter(o => o.name && o.name.trim());
+  if (filter !== 'all') list = list.filter(o => o.status === filter);
+  if (q) { const ql = q.toLowerCase(); list = list.filter(o => (o.name+o.email+o.notes+o.address||'').toLowerCase().includes(ql)); }
+  const g = document.getElementById('ogrid');
+  if (!list.length) { g.innerHTML = `<div class="empty">Δεν βρέθηκαν γραφεία.<br>Πρόσθεσε γραφεία ή ρώτησε τον AI βοηθό.</div>`; return; }
+  g.innerHTML = list.map(o => `
+    <div class="ocard">
+      <div class="otop">
+        <div><div class="oname">${o.name}</div><div class="osub">${o.sheet||''}</div></div>
+        <span class="sp s-${o.status}">${SL[o.status]||o.status}</span>
+      </div>
+      ${o.email && !o.email.includes(' ') && !o.email.toLowerCase().includes('athens') ? `<div class="ometa">✉ ${o.email}</div>` : ''}
+      ${o.phone && String(o.phone).length > 5 ? `<div class="ometa">✆ ${o.phone}</div>` : ''}
+      ${o.address ? `<div class="ometa">◎ ${o.address}</div>` : ''}
+      ${o.notes ? `<div class="onotes">${o.notes.slice(0,120)}${o.notes.length>120?'...':''}</div>` : ''}
+      <div class="oacts">
+        <button class="btn" style="font-size:11px;padding:4px 9px" onclick="editOffice(${o.id})">Επεξεργασία</button>
+        <button class="btn" style="font-size:11px;padding:4px 9px" onclick="briefFor(${o.id})">Briefing ↗</button>
+        <button class="btn btn-primary" style="font-size:11px;padding:4px 9px;margin-left:auto" onclick="calFor(${o.id})">+ Cal</button>
+      </div>
+    </div>`).join('');
+}
+
+function openOfficeMod(id=null) {
+  editId = id;
+  if (id) {
+    const o = offices.find(x => x.id === id);
+    if (o) {
+      document.getElementById('em-name').value = o.name || '';
+      document.getElementById('em-email').value = o.email || '';
+      document.getElementById('em-phone').value = o.phone || '';
+      document.getElementById('em-addr').value = o.address || '';
+      document.getElementById('em-status').value = o.status || 'to_contact';
+      document.getElementById('em-notes').value = o.notes || '';
+    }
+  } else {
+    ['em-name','em-email','em-phone','em-addr','em-notes'].forEach(i => document.getElementById(i).value = '');
+    document.getElementById('em-status').value = 'to_contact';
+  }
+  document.getElementById('omod').classList.add('open');
+}
+
+function editOffice(id) { openOfficeMod(id); }
+
+function saveEdit() {
+  const name = document.getElementById('em-name').value.trim();
+  if (!name) return alert('Βάλε όνομα γραφείου!');
+  const data = {
+    id: editId || Date.now(),
+    name,
+    email: document.getElementById('em-email').value.trim(),
+    phone: document.getElementById('em-phone').value.trim(),
+    address: document.getElementById('em-addr').value.trim(),
+    status: document.getElementById('em-status').value,
+    notes: document.getElementById('em-notes').value.trim(),
+    sheet: 'Manual',
+  };
+  data.sl = SL[data.status] || data.status;
+  if (editId) { const i = offices.findIndex(o => o.id === editId); if (i !== -1) offices[i] = data; }
+  else offices.push(data);
+  save(); closeMod('omod');
+  renderStats(); renderFilters(); renderOffices(document.getElementById('osearch').value, curF);
+}
+
+function closeMod(id) { document.getElementById(id).classList.remove('open'); }
+
+// ── CALENDAR ──────────────────────────────────────────
+function openCalMod(title='', loc='', notes='') {
+  document.getElementById('cal-title').value = title;
+  document.getElementById('cal-loc').value = loc;
+  document.getElementById('cal-notes').value = notes;
+  document.getElementById('cal-date').value = '';
+  document.getElementById('cal-status').textContent = '';
+  document.getElementById('cal-status').style.color = '#666';
+  document.getElementById('calmod').classList.add('open');
+}
+
+function calFor(id) {
+  const o = offices.find(x => x.id === id); if (!o) return;
+  openCalMod('Ραντεβού ARTENO — ' + o.name, o.address || '', o.notes ? o.notes.slice(0,200) : '');
+}
+
+async function saveToCalendar() {
+  const title = document.getElementById('cal-title').value.trim();
+  const date = document.getElementById('cal-date').value;
+  const time = document.getElementById('cal-time').value || '10:00';
+  const dur = parseInt(document.getElementById('cal-dur').value) || 60;
+  const loc = document.getElementById('cal-loc').value.trim();
+  const notes = document.getElementById('cal-notes').value.trim();
+  if (!title || !date) { document.getElementById('cal-status').textContent = 'Βάλε τίτλο και ημερομηνία!'; return; }
+
+  const btn = document.getElementById('cal-save-btn');
+  btn.textContent = 'Αποθηκεύω...'; btn.disabled = true;
+  document.getElementById('cal-status').textContent = 'Αποστολή στο Google Calendar...';
+
+  try {
+    const start = new Date(`${date}T${time}:00`);
+    const end = new Date(start.getTime() + dur * 60000);
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        system: 'You are a calendar assistant. Use the Google Calendar MCP tool to create calendar events.',
+        messages: [{ role: 'user', content: `Create a Google Calendar event:
+Title: ${title}
+Start: ${start.toISOString()}
+End: ${end.toISOString()}
+Location: ${loc}
+Description: ARTENO — ${notes}
+Use the Google Calendar MCP tool.` }],
+        mcp_servers: [{ type: 'url', url: 'https://gcal.mcp.claude.com/mcp', name: 'gcal' }]
+      })
+    });
+    const data = await res.json();
+    const txt = data.content?.map(b => b.type === 'text' ? b.text : '').join(' ') || '';
+    const ok = txt.toLowerCase().includes('creat') || txt.toLowerCase().includes('event') || txt.toLowerCase().includes('calendar');
+
+    const appt = { id: Date.now(), title, date, time, dur, loc, notes, created: new Date().toISOString() };
+    appointments.push(appt); save();
+
+    const st = document.getElementById('cal-status');
+    if (ok) { st.style.color = '#1e7e34'; st.textContent = '✓ Αποθηκεύτηκε στο Google Calendar!'; }
+    else { st.style.color = '#666'; st.textContent = 'Αποθηκεύτηκε τοπικά. Έλεγξε σύνδεση Calendar.'; }
+    setTimeout(() => { closeMod('calmod'); renderCal(); }, 1600);
+  } catch(e) {
+    document.getElementById('cal-status').style.color = '#c5221f';
+    document.getElementById('cal-status').textContent = 'Σφάλμα: ' + e.message;
+  }
+  btn.textContent = 'Αποθήκευση στο Calendar'; btn.disabled = false;
+}
+
+function renderCal() {
+  const el = document.getElementById('callist');
+  if (!appointments.length) { el.innerHTML = `<div class="empty">Δεν υπάρχουν ραντεβού ακόμα.<br>Πάτα "+ Ραντεβού" για να προσθέσεις.</div>`; return; }
+  const sorted = [...appointments].sort((a,b) => new Date(a.date+' '+a.time) - new Date(b.date+' '+b.time));
+  el.innerHTML = sorted.map(a => `
+    <div class="capt">
+      <div class="capt-top">
+        <div class="capt-title">${a.title}</div>
+        <span class="capt-date">${a.date} ${a.time}</span>
+      </div>
+      ${a.loc ? `<div class="capt-meta">◎ ${a.loc}</div>` : ''}
+      ${a.notes ? `<div class="capt-meta" style="margin-top:6px;border-top:1px solid #f0f0ee;padding-top:6px">${a.notes.slice(0,150)}</div>` : ''}
+      <div style="margin-top:8px">
+        <button class="btn" style="font-size:11px;padding:4px 9px;color:#c5221f" onclick="delAppt(${a.id})">Διαγραφή</button>
+      </div>
+    </div>`).join('');
+}
+
+function delAppt(id) { appointments = appointments.filter(a => a.id !== id); save(); renderCal(); }
+
+// ── BRIEFING ──────────────────────────────────────────
+function renderBriefing(q='') {
+  let list = offices.filter(o => o.name && o.notes && (o.status === 'appointment' || o.status === 'contacted'));
+  if (q) { const ql = q.toLowerCase(); list = list.filter(o => (o.name||'').toLowerCase().includes(ql)); }
+  const el = document.getElementById('blist');
+  if (!list.length) { el.innerHTML = `<div class="empty">Δεν υπάρχουν γραφεία με ιστορικό.<br>Πρόσθεσε γραφεία για να δεις briefing.</div>`; return; }
+  el.innerHTML = list.map(o => `
+    <div class="bcard">
+      <div class="bcard-top">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="bcard-name">${o.name}</span>
+          <span class="sp s-${o.status}">${SL[o.status]}</span>
+        </div>
+        <button class="btn btn-primary" style="font-size:11px;padding:4px 10px" onclick="briefFor(${o.id})">AI Briefing ↗</button>
+      </div>
+      ${o.phone ? `<div style="font-size:11px;color:#999;margin-bottom:4px">✆ ${o.phone}</div>` : ''}
+      <div class="bcard-notes">${(o.notes||'').slice(0,200)}${(o.notes||'').length>200?'...':''}</div>
+    </div>`).join('');
+}
+
+function briefFor(id) {
+  const o = offices.find(x => x.id === id); if (!o) return;
+  showSec('chat', document.querySelector('.nav-item'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.querySelector('.nav-item').classList.add('active');
+  document.getElementById('ci').value = `Δώσε μου briefing για ραντεβού με "${o.name}". Κατάσταση: ${o.sl||o.status}. Ιστορικό: ${o.notes||'δεν υπάρχει'}. Τηλ: ${o.phone||'-'}. Τι να πω, τι να αποφύγω, ποιο είναι το επόμενο βήμα;`;
+  send();
+}
+
+// ── AI CHAT ───────────────────────────────────────────
+const SYS = `Είσαι ο ψηφιακός βοηθός της ARTENO, εταιρείας αντιπροσωπειών αρχιτεκτονικών υλικών.
+
+Το κύριο προϊόν είναι ένα νέου τύπου υαλότουβλο — premium, σύγχρονο, πολύ διαφορετικό από το κλασικό τετράγωνο. Στρατηγική: κλειδωμένη πλατφόρμα, αποκλειστική πρόσβαση με username/password που εκδίδονται μόνο από την εταιρεία.
+
+Βοήθα τον χρήστη να:
+1. Βρει & καταγράψει αρχιτεκτονικά γραφεία
+2. Παρακολουθεί την επικοινωνία με κάθε γραφείο
+3. Παίρνει briefing πριν από ραντεβού
+4. Κλείνει ραντεβού στο Google Calendar
+
+Απάντα στα ελληνικά, σύντομα και ουσιαστικά.`;
+
+async function callClaude(msg) {
+  const ctx = offices.filter(o => o.notes || o.status === 'appointment').slice(0, 25)
+    .map(o => `${o.name} | ${o.sl||o.status} | ${(o.notes||'').slice(0,80)}`).join('\n');
+  chatHist.push({ role: 'user', content: msg });
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 800,
+        system: SYS + (ctx ? '\n\nΓραφεία με ιστορικό:\n' + ctx : ''),
+        messages: chatHist
+      })
+    });
+    const d = await r.json();
+    const rep = d.content?.find(b => b.type === 'text')?.text || 'Σφάλμα σύνδεσης.';
+    chatHist.push({ role: 'assistant', content: rep });
+    return rep;
+  } catch(e) { return 'Σφάλμα σύνδεσης: ' + e.message; }
+}
+
+function addMsg(txt, isU) {
+  const m = document.getElementById('msgs');
+  const d = document.createElement('div'); d.className = 'msg' + (isU ? ' u' : '');
+  d.innerHTML = `<div class="av ${isU?'u':'ai'}">${isU?'Ε':'A'}</div><div class="bub">${txt.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>')}</div>`;
+  m.appendChild(d); m.scrollTop = 99999;
+}
+
+async function send() {
+  const ci = document.getElementById('ci');
+  const t = ci.value.trim(); if (!t) return;
+  ci.value = ''; ci.style.height = 'auto';
+  addMsg(t, true);
+  const ld = document.createElement('div'); ld.className = 'msg';
+  ld.innerHTML = `<div class="av ai">A</div><div class="bub ld">Σκέφτομαι...</div>`;
+  document.getElementById('msgs').appendChild(ld);
+  document.getElementById('msgs').scrollTop = 99999;
+  const rep = await callClaude(t);
+  ld.remove(); addMsg(rep, false);
+  // Auto-open calendar if detected
+  if ((t.includes('ραντεβού') || t.includes('calendar')) && (t.includes('κλείσε') || t.includes('βάλε') || t.includes('προσθεσε'))) {
+    const nm = t.match(/(?:με|για)\s+([a-zA-Zα-ωΑ-Ωά-ώέ-ύ\s]+?)(?:\s+(?:την|τη|στις|τη|ημ))/i);
+    openCalMod(nm ? 'Ραντεβού ARTENO — ' + (nm[1]||'').trim() : 'Ραντεβού ARTENO');
+  }
+}
+
+function hkey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); } }
+function ar(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 120) + 'px'; }
+function clearChat() {
+  chatHist = [];
+  document.getElementById('msgs').innerHTML = `<div class="msg"><div class="av ai">A</div><div class="bub">Νέα συνομιλία. Πώς μπορώ να βοηθήσω;</div></div>`;
+}
+
+// Init
+renderStats();
+</script>
+</body>
+</html>
